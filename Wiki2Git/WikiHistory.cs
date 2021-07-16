@@ -148,7 +148,7 @@ public partial class mediawikiSiteinfo {
     }
     
     /// <remarks/>
-    [System.Xml.Serialization.XmlArrayItemAttribute("namespace", typeof(mediawikiSiteinfoNamespacesNamespace))]
+    [System.Xml.Serialization.XmlArrayItemAttribute("namespace", typeof(mediawikiSiteinfoNamespacesNamespace[]))]
     public mediawikiSiteinfoNamespacesNamespace[][] namespaces {
         get {
             return this.namespacesField;
