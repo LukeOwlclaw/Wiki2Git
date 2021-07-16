@@ -10,6 +10,19 @@ namespace Wiki2Git
     {
         static void Main(string[] args)
         {
+            if (DateTime.Now.Ticks > 0)
+            {
+                //read string << EOF
+                //STAGED:ONE-419 - "text" isn't blue
+                //EOF
+
+                //git merge origin/one-419 -m "$string"
+
+                var p = @"c:\temp\_Wiki2Git\Hello World";
+                Directory.SetCurrentDirectory(p);
+                Git("commit --date=format:short:2020-05-13T07:12:04Z --author=213.162.72.184 -m 'Test \"123\" Test'");
+                return;
+            }
             // Download history of Wikimedia article via https://en.wikipedia.org/wiki/Special:Export
             // Create C# classes from XML: https://docs.microsoft.com/en-us/dotnet/standard/serialization/xml-schema-definition-tool-xsd-exe
             // > xsd.exe Wikipedia-20210716042420.xml
