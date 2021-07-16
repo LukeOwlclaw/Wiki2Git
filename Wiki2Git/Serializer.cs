@@ -19,7 +19,7 @@ namespace Wiki2Git
 
             using (StringReader sr = new StringReader(input))
             {
-                return (T)ser.Deserialize(sr);
+                return (T?)ser.Deserialize(sr) ?? throw new Exception();
             }
         }
 
@@ -27,11 +27,12 @@ namespace Wiki2Git
         {
             System.Xml.Serialization.XmlSerializer ser = new System.Xml.Serialization.XmlSerializer(typeof(T));
 
-            return (T)ser.Deserialize(input);
+            return (T?)ser.Deserialize(input) ?? throw new Exception();
         }
 
         public string Serialize<T>(T ObjectToSerialize)
         {
+            if (ObjectToSerialize == null) { throw new ArgumentNullException(nameof(ObjectToSerialize)); }
             XmlSerializer xmlSerializer = new XmlSerializer(ObjectToSerialize.GetType());
 
             using (StringWriter textWriter = new StringWriter())
