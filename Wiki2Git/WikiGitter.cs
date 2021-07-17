@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -93,6 +94,12 @@ namespace Wiki2Git
                 var serializer = new Serializer();
                 var wiki = serializer.Deserialize<mediawiki>(fs);
 
+                if (wiki.page == null || !(wiki.page.Any()))
+                {
+                    Console.WriteLine($"Page {mPageName} does not exist.");
+                    return;
+                }
+
                 revisionList.AddRange(wiki.page.Single().revision);
 
                 if (wiki.page.Single().revision.Length < 1000)
@@ -112,7 +119,8 @@ namespace Wiki2Git
                 Git("init");
             }
 
-            foreach (var revision in revisionList)
+            var revisionListUse = revisionList.Skip(startRevision).ToList();
+            foreach (var revision in revisionListUse)
             {
                 if (startRevision % 10 == 0)
                 {
@@ -211,11 +219,40 @@ namespace Wiki2Git
             }
         }
 
-        private static string SanitizeComment(string comment)
+        private static string SanitizeComment(string? comment)
         {
+            if (comment == null) { return ""; }
             // ProcessStartInfo.Arguments:
             // To include quotation marks in the final parsed argument, triple-escape each mark.
-            return comment?.Replace("\"", "\"\"\"") ?? "";
+            var sb = new StringBuilder(comment.Length + 5);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                foreach (var c in comment)
+                {
+                    if (c == '"' || c == '&' || c == '|' || c == '(' || c == ')' || c == '<' || c == '>' || c == '^')
+                    {
+                        sb.Append('\\');
+                    }
+
+                    sb.Append(c);
+                }
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                foreach (var c in comment)
+                {
+                    if (c == '&' || c == '|' || c == '(' || c == ')' || c == '<' || c == '>' || c == '^')
+                    {
+                        sb.Append('^');
+                    }
+                    else if (c == '"') { sb.Append("\"\""); }
+
+                    sb.Append(c);
+                }
+            }
+            else { throw new NotSupportedException("OS platform not supported"); }
+
+            return sb.ToString();
         }
 
         private static void Git(string arguments)
