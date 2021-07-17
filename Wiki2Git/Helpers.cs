@@ -42,5 +42,21 @@ namespace Wiki2Git
             var r = new Regex(string.Format("[{0}]", Regex.Escape(regexSearch)));
             return r.Replace(name, "");
         }
+
+        public static string FileSizeFormat(long sizeInBytes)
+        {
+            if (sizeInBytes < 0) { throw new ArgumentOutOfRangeException(nameof(sizeInBytes), sizeInBytes, "Size must be a non-negative number"); }
+            decimal size = sizeInBytes;
+            int index = 0;
+            var units = new[] { "B", "KB", "MB", "GB", "TB" };
+
+            while (size >= 1024 && index < units.Length - 1)
+            {
+                size /= 1024;
+                index++;
+            }
+
+            return $"{size.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)} {units[index]}";
+        }
     }
 }
