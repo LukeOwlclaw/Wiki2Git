@@ -40,6 +40,8 @@ namespace Wiki2Git
             mOutDirectory = Path.Combine(mOutDirectory, pageNameSane);
             Directory.CreateDirectory(mOutDirectory);
             Directory.SetCurrentDirectory(mOutDirectory);
+            // get absolute path
+            mOutDirectory = Directory.GetCurrentDirectory();
 
             Console.Write($"Downloading Wikipedia article {mPageName}... ");
 

@@ -35,9 +35,10 @@ namespace Wiki2Git
             var outDirectory = clp["o"] ?? Directory.GetCurrentDirectory();
             int startRevision = Convert.ToInt32(clp["r"]);
 
-            Console.CancelKeyPress += delegate
+            Console.CancelKeyPress += (sender, args) =>
             {
                 Console.WriteLine($"Wiki2Git aborted for '{pageName}'. Continue at revision {startRevision}");
+                Environment.Exit(1);
             };
 
             try
