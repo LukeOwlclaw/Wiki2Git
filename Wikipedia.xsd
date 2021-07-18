@@ -1,0 +1,87 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema id="NewDataSet" targetNamespace="http://www.mediawiki.org/xml/export-0.10/" xmlns:mstns="http://www.mediawiki.org/xml/export-0.10/" xmlns="http://www.mediawiki.org/xml/export-0.10/" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" attributeFormDefault="qualified" elementFormDefault="qualified" xmlns:app1="http://www.w3.org/XML/1998/namespace">
+  <xs:import namespace="http://www.w3.org/XML/1998/namespace" schemaLocation="Wikipedia-20210716042420_app1.xsd" />
+  <xs:element name="mediawiki">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="siteinfo" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="sitename" type="xs:string" minOccurs="0" />
+              <xs:element name="dbname" type="xs:string" minOccurs="0" />
+              <xs:element name="base" type="xs:string" minOccurs="0" />
+              <xs:element name="generator" type="xs:string" minOccurs="0" />
+              <xs:element name="case" type="xs:string" minOccurs="0" />
+              <xs:element name="namespaces" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="namespace" nillable="true" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:simpleContent msdata:ColumnName="namespace_Text" msdata:Ordinal="2">
+                          <xs:extension base="xs:string">
+                            <xs:attribute name="key" form="unqualified" type="xs:string" />
+                            <xs:attribute name="case" form="unqualified" type="xs:string" />
+                          </xs:extension>
+                        </xs:simpleContent>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="page" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="title" type="xs:string" minOccurs="0" />
+              <xs:element name="ns" type="xs:string" minOccurs="0" />
+              <xs:element name="id" type="xs:string" minOccurs="0" />
+              <xs:element name="revision" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="id" type="xs:string" minOccurs="0" />
+                    <xs:element name="parentid" type="xs:string" minOccurs="0" />
+                    <xs:element name="timestamp" type="xs:string" minOccurs="0" />
+                    <xs:element name="minor" type="xs:string" minOccurs="0" />
+                    <xs:element name="comment" type="xs:string" minOccurs="0" />
+                    <xs:element name="model" type="xs:string" minOccurs="0" />
+                    <xs:element name="format" type="xs:string" minOccurs="0" />
+                    <xs:element name="sha1" type="xs:string" minOccurs="0" />
+                    <xs:element name="contributor" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="ip" type="xs:string" minOccurs="0" />
+                          <xs:element name="username" type="xs:string" minOccurs="0" />
+                          <xs:element name="id" type="xs:string" minOccurs="0" />
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="text" nillable="true" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:simpleContent msdata:ColumnName="text_Text" msdata:Ordinal="1">
+                          <xs:extension base="xs:string">
+                            <xs:attribute name="bytes" form="unqualified" type="xs:string" />
+                          </xs:extension>
+                        </xs:simpleContent>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+      <xs:attribute name="version" form="unqualified" type="xs:string" />
+      <xs:attribute ref="app1:lang" />
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="NewDataSet" msdata:IsDataSet="true" msdata:UseCurrentLocale="true">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="mediawiki" />
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
