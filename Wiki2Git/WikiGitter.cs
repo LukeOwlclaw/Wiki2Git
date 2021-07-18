@@ -155,7 +155,7 @@ namespace Wiki2Git
         private void StoreGitRevision(string pageName, mediawikiPageRevision revision)
         {
             RemoveOldFiles(revision.id);
-            var fileCounter = 1;
+            var fileCounter = 0;
             foreach (var text in revision.text)
             {
                 var tryCount = 3;
@@ -163,8 +163,17 @@ namespace Wiki2Git
                 {
                     try
                     {
-                        var lines = SplitLines(text.Value);
-                        File.WriteAllLines(pageName + fileCounter, lines);
+                        if (text.Value != null)
+                        {
+                            var lines = SplitLines(text.Value);
+                            File.WriteAllLines(pageName + fileCounter, lines);
+                        }
+                        else
+                        {
+                            // File was deleted
+                            fileCounter--;
+                        }
+
                         break;
                     }
                     catch (IOException)

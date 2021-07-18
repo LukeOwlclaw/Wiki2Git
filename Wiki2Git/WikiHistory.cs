@@ -448,14 +448,14 @@ public partial class mediawikiPageRevisionContributor {
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(AnonymousType=true, Namespace="http://www.mediawiki.org/xml/export-0.10/")]
 public partial class mediawikiPageRevisionText {
+#nullable enable
+    private string? bytesField;
     
-    private string bytesField;
-    
-    private string valueField;
+    private string? valueField;
     
     /// <remarks/>
     [System.Xml.Serialization.XmlAttributeAttribute()]
-    public string bytes {
+    public string? bytes {
         get {
             return this.bytesField;
         }
@@ -463,10 +463,10 @@ public partial class mediawikiPageRevisionText {
             this.bytesField = value;
         }
     }
-    
+
     /// <remarks/>
     [System.Xml.Serialization.XmlTextAttribute()]
-    public string Value {
+    public string? Value {
         get {
             return this.valueField;
         }
@@ -485,11 +485,11 @@ public partial class mediawikiPageRevisionText {
 [System.Xml.Serialization.XmlRootAttribute(Namespace="http://www.mediawiki.org/xml/export-0.10/", IsNullable=false)]
 public partial class NewDataSet {
     
-    private mediawiki[] itemsField;
+    private mediawiki[]? itemsField;
     
     /// <remarks/>
     [System.Xml.Serialization.XmlElementAttribute("mediawiki")]
-    public mediawiki[] Items {
+    public mediawiki[]? Items {
         get {
             return this.itemsField;
         }
