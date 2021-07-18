@@ -146,7 +146,8 @@ namespace Wiki2Git
                 {
                     try
                     {
-                        File.WriteAllText(pageName + fileCounter, text.Value);
+                        var lines = SplitLines(text.Value);
+                        File.WriteAllLines(pageName + fileCounter, lines);
                         break;
                     }
                     catch (IOException)
@@ -190,6 +191,97 @@ namespace Wiki2Git
             }
 
             Git($"commit {addAllParameter} --date=format:short:\"{revision.timestamp}\" --author=\"{author} <{authorId}@wikipedia.org>\" -m \"{message}\" --allow-empty");
+        }
+
+        private IEnumerable<string> SplitLines(string value)
+        {
+            var builder = new StringBuilder((int)(value.Length * 1.05));
+            const int aimLineLength = 80;
+            const int minLineLength = 60;
+            using var reader = new StringReader(value);
+            int c;
+            int position = 0;
+            bool breakAfterNextSpace = false;
+            while ((c = reader.Read()) != -1)
+            {
+                if (breakAfterNextSpace && (c == ' ' || c == '\n'))
+                {
+                    var line = builder.ToString();
+                    builder.Clear();
+                    breakAfterNextSpace = false;
+                    position = 0;
+                    var lines = SplitLines(line, new[] { "|}|}", "<br>" });
+                    if (lines != null)
+                    {
+                        foreach (var l in lines)
+                        {
+                            yield return l;
+
+                        }
+                    }
+                    else
+                    {
+                        yield return line;
+                    }
+                }
+                else
+                {
+                    builder.Append((char)c);
+
+                    if (position >= aimLineLength) { breakAfterNextSpace = true; }
+                    else if (position > minLineLength)
+                    {
+                        if (c == ','
+                        || c == '.'
+                        || c == '!'
+                        || c == '?'
+                        ) { breakAfterNextSpace = true; }
+                    }
+                }
+
+                position++;
+            }
+
+            yield return builder.ToString();
+        }
+
+        private IEnumerable<string> SplitLines(string input, string[] keyWords)
+        {
+            var builder = new StringBuilder(input.Length);
+            var reader = new StringReader(input);
+            int c;
+            int[] matchPositionsOfKeywords = Enumerable.Repeat(0, keyWords.Length).ToArray();
+            while ((c = reader.Read()) != -1)
+            {
+                builder.Append((char)c);
+
+                for (int i = 0; i < keyWords.Length; i++)
+                {
+                    var nextMatchCharForI = keyWords[i][matchPositionsOfKeywords[i]];
+                    if (c == nextMatchCharForI)
+                    {
+                        matchPositionsOfKeywords[i]++;
+                        if (matchPositionsOfKeywords[i] == keyWords[i].Length)
+                        {
+                            // match keyWords[i]
+                            matchPositionsOfKeywords[i] = 0;
+                            var line = builder.ToString();
+                            builder.Clear();
+                            yield return line;
+                            yield return string.Empty;
+                        }
+                    }
+                    else
+                    {
+                        matchPositionsOfKeywords[i] = 0;
+                    }
+                }
+            }
+
+            if (builder.Length > 0)
+            {
+                yield return builder.ToString();
+            }
         }
 
         private static void RemoveOldFiles(string id)
