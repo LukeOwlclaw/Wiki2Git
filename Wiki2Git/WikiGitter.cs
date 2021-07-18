@@ -10,12 +10,24 @@ using System.Threading.Tasks;
 // Ignore spelling: config oldid de diff catname Wikipedia init prev
 namespace Wiki2Git
 {
+    /// <summary>
+    /// Downloads Wikipedia article and writes it to Git repository.
+    /// Each Wikipedia revision will be converted to a Git commit.
+    /// </summary>
     internal class WikiGitter
     {
         private readonly string mPageName;
         private readonly string mLanguage;
         private string mOutDirectory;
 
+        /// <summary>
+        /// Create instance of <see cref="WikiGitter"/>
+        /// </summary>
+        /// <param name="pageName">Wikipedia article name</param>
+        /// <param name="language">Language of Wikipedia to use (only "en" and "de" supported;
+        /// but likely any other language could be also used)</param>
+        /// <param name="outDirectory">relative or absolute path to output directory.
+        /// Within this directory a new directory using the <paramref name="pageName"/> will be created.</param>
         public WikiGitter(string pageName, string language, string outDirectory)
         {
             mPageName = pageName;
@@ -135,6 +147,11 @@ namespace Wiki2Git
         private string? mLastAuthorId = null;
         private int? mLastFileCounter = null;
 
+        /// <summary>
+        /// Write <paramref name="revision"/> of <paramref name="pageName"/> to Git repository.
+        /// </summary>
+        /// <param name="pageName">Wikipedia article name</param>
+        /// <param name="revision">article revision</param>
         private void StoreGitRevision(string pageName, mediawikiPageRevision revision)
         {
             RemoveOldFiles(revision.id);
@@ -193,11 +210,15 @@ namespace Wiki2Git
             Git($"commit {addAllParameter} --date=format:short:\"{revision.timestamp}\" --author=\"{author} <{authorId}@wikipedia.org>\" -m \"{message}\" --allow-empty");
         }
 
+        /// <summary>
+        /// Split <paramref name="value"/> into Git manageable chunks.
+        /// </summary>
+        /// <param name="value">input text</param>
+        /// <returns>split text</returns>
         private IEnumerable<string> SplitLines(string value)
         {
             var builder = new StringBuilder((int)(value.Length * 1.05));
-            const int aimLineLength = 80;
-            const int minLineLength = 60;
+            const int lineLength = 80;
             using var reader = new StringReader(value);
             int c;
             int position = 0;
@@ -228,8 +249,8 @@ namespace Wiki2Git
                 {
                     builder.Append((char)c);
 
-                    if (position >= aimLineLength) { breakAfterNextSpace = true; }
-                    else if (position > minLineLength)
+                    if (position >= lineLength) { breakAfterNextSpace = true; }
+                    else
                     {
                         if (c == ','
                         || c == '.'
@@ -245,23 +266,29 @@ namespace Wiki2Git
             yield return builder.ToString();
         }
 
-        private IEnumerable<string> SplitLines(string input, string[] keyWords)
+        /// <summary>
+        /// Split <paramref name="input"/> after each <paramref name="keywords"/> and create empty line.
+        /// </summary>
+        /// <param name="input">input text</param>
+        /// <param name="keywords">split words</param>
+        /// <returns>split text</returns>
+        private IEnumerable<string> SplitLines(string input, string[] keywords)
         {
             var builder = new StringBuilder(input.Length);
             var reader = new StringReader(input);
             int c;
-            int[] matchPositionsOfKeywords = Enumerable.Repeat(0, keyWords.Length).ToArray();
+            int[] matchPositionsOfKeywords = Enumerable.Repeat(0, keywords.Length).ToArray();
             while ((c = reader.Read()) != -1)
             {
                 builder.Append((char)c);
 
-                for (int i = 0; i < keyWords.Length; i++)
+                for (int i = 0; i < keywords.Length; i++)
                 {
-                    var nextMatchCharForI = keyWords[i][matchPositionsOfKeywords[i]];
+                    var nextMatchCharForI = keywords[i][matchPositionsOfKeywords[i]];
                     if (c == nextMatchCharForI)
                     {
                         matchPositionsOfKeywords[i]++;
-                        if (matchPositionsOfKeywords[i] == keyWords[i].Length)
+                        if (matchPositionsOfKeywords[i] == keywords[i].Length)
                         {
                             // match keyWords[i]
                             matchPositionsOfKeywords[i] = 0;
