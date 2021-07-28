@@ -83,7 +83,7 @@ namespace Wiki2Git
 
                 if (!File.Exists(outFile))
                 {
-                    using var client = new HttpClient();
+                    using var client = new HttpClient() { Timeout = TimeSpan.FromSeconds(300), };
                     var response = client.PostAsync(mWikiUrls[mLanguage] + "Special:Export", formContent).Result;
                     if (response.StatusCode == System.Net.HttpStatusCode.OK)
                     {
