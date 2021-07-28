@@ -19,20 +19,27 @@ namespace Wiki2Git
             process.StartInfo.Arguments = arguments;
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.CreateNoWindow = true;
-            process.StartInfo.RedirectStandardOutput = true;
-            process.OutputDataReceived += (sender, data) =>
+            if (outBuilder != null)
             {
-                outBuilder?.AppendLine(data.Data);
-            };
-            process.StartInfo.RedirectStandardError = true;
-            process.ErrorDataReceived += (sender, data) =>
+                process.StartInfo.RedirectStandardOutput = true;
+                process.OutputDataReceived += (sender, data) =>
+                {
+                    outBuilder?.AppendLine(data.Data);
+                };
+            }
+
+            if (errBuilder != null)
             {
-                errBuilder?.AppendLine(data.Data);
-            };
+                process.StartInfo.RedirectStandardError = true;
+                process.ErrorDataReceived += (sender, data) =>
+                {
+                    errBuilder?.AppendLine(data.Data);
+                };
+            }
 
             process.Start();
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
+            if (outBuilder != null) { process.BeginOutputReadLine(); }
+            if (errBuilder != null) { process.BeginErrorReadLine(); }
             process.WaitForExit();
             return process.ExitCode;
         }

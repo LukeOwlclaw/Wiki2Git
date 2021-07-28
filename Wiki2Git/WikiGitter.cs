@@ -131,6 +131,32 @@ namespace Wiki2Git
             {
                 Git("init");
             }
+            else if (startRevision == 0)
+            {
+                var sbOut = new StringBuilder();
+                // Get log message of latest commit
+                Git("log -1", ref sbOut);
+                // e.g. https://de.wikipedia.org/wiki/Wissen?oldid=178452042&diff=prev
+                var lastCommitMessage = sbOut.ToString();
+                var searchWord = GetWikiRevisionLinkBase(mPageName);
+                var start = lastCommitMessage.IndexOf(searchWord);
+                if (start >= 0)
+                {
+                    start += searchWord.Length;
+                    var end = lastCommitMessage.IndexOf('&', start);
+                    if (end > start)
+                    {
+                        var revisionId = lastCommitMessage[start..end];
+                        var index = revisionList.FindIndex(r => r.id == revisionId);
+                        if (index > 0)
+                        {
+                            startRevision = index + 1;
+                            Console.WriteLine($"Detected existing import. Continue after revision {revisionId} at index {startRevision}");
+                        }
+
+                    }
+                }
+            }
 
             var revisionListUse = revisionList.Skip(startRevision).ToList();
             foreach (var revision in revisionListUse)
@@ -200,14 +226,14 @@ namespace Wiki2Git
 
             mLastFileCounter = fileCounter;
 
-            var wikiUrl = mWikiUrls[mLanguage] + pageName;
-
             var author = SanitizeUserName(revision.contributor.Single().username)
                 ?? revision.contributor.Single().ip;
             if (string.IsNullOrEmpty(author)) { author = "_no_author_"; }
             var authorId = revision.contributor.Single().id ?? revision.contributor.Single().ip;
             if (string.IsNullOrEmpty(authorId)) { authorId = "_no_authorid_"; }
-            var message = SanitizeComment(revision.comment) + $"\n\n{wikiUrl}?oldid={revision.id}&diff=prev";
+
+            var wikiRevisionLink = GetWikiRevisionLink(pageName, revision);
+            var message = SanitizeComment(revision.comment) + $"\n\n" + wikiRevisionLink;
             if (author != mLastAuthor)
             {
                 Git($"config --local user.name \"{author}\"");
@@ -221,6 +247,20 @@ namespace Wiki2Git
             }
 
             Git($"commit {addAllParameter} --date=format:short:\"{revision.timestamp}\" --author=\"{author} <{authorId}@wikipedia.org>\" -m \"{message}\" --allow-empty");
+        }
+
+        private string GetWikiRevisionLink(string pageName, mediawikiPageRevision revision)
+        {
+            var wikiRevisionLinkBase = GetWikiRevisionLinkBase(pageName);
+            var wikiRevisionLink = $"{wikiRevisionLinkBase}{revision.id}&diff=prev";
+            return wikiRevisionLink;
+        }
+
+        private string GetWikiRevisionLinkBase(string pageName)
+        {
+            var wikiUrl = mWikiUrls[mLanguage] + pageName;
+            var wikiRevisionLinkBase = $"{wikiUrl}?oldid=";
+            return wikiRevisionLinkBase;
         }
 
         private static HashSet<char>? gInvalidChars;
@@ -436,9 +476,16 @@ namespace Wiki2Git
 
         private static void Git(string arguments)
         {
-            var sbOut = new StringBuilder();
-            var sbErr = new StringBuilder();
-            var ret = Helpers.Exec("git", arguments, sbOut, sbErr);
+            var ret = Helpers.Exec("git", arguments);
+            if (ret != 0)
+            {
+                throw new Exception($"git {arguments} failed in {Directory.GetCurrentDirectory()}");
+            }
+        }
+
+        private static void Git(string arguments, ref StringBuilder sbOut)
+        {
+            var ret = Helpers.Exec("git", arguments, sbOut);
             if (ret != 0)
             {
                 throw new Exception($"git {arguments} failed in {Directory.GetCurrentDirectory()}");
