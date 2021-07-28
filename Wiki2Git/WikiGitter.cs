@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -201,8 +202,11 @@ namespace Wiki2Git
 
             var wikiUrl = mWikiUrls[mLanguage] + pageName;
 
-            var author = revision.contributor.Single().username ?? revision.contributor.Single().ip;
+            var author = SanitizeUserName(revision.contributor.Single().username)
+                ?? revision.contributor.Single().ip;
+            if (string.IsNullOrEmpty(author)) { author = "_no_author_"; }
             var authorId = revision.contributor.Single().id ?? revision.contributor.Single().ip;
+            if (string.IsNullOrEmpty(authorId)) { authorId = "_no_authorid_"; }
             var message = SanitizeComment(revision.comment) + $"\n\n{wikiUrl}?oldid={revision.id}&diff=prev";
             if (author != mLastAuthor)
             {
@@ -217,6 +221,53 @@ namespace Wiki2Git
             }
 
             Git($"commit {addAllParameter} --date=format:short:\"{revision.timestamp}\" --author=\"{author} <{authorId}@wikipedia.org>\" -m \"{message}\" --allow-empty");
+        }
+
+        private static HashSet<char>? gInvalidChars;
+
+        public static HashSet<char> InvalidChars
+        {
+            get
+            {
+                if (gInvalidChars == null)
+                {
+                    gInvalidChars = new HashSet<char>(Path.GetInvalidFileNameChars().Union(Path.GetInvalidPathChars()));
+                }
+                return gInvalidChars;
+            }
+        }
+
+        internal static string? SanitizeUserName(string username)
+        {
+            if (string.IsNullOrEmpty(username)) { return null; }
+            var sb = new StringBuilder(username.Length + 5);
+
+            string valueFormD = username.Normalize(NormalizationForm.FormD);
+
+            foreach (var c in valueFormD)
+            {
+                var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(c);
+                if (unicodeCategory != UnicodeCategory.NonSpacingMark)
+                {
+                    if (c == '*') { sb.Append("_STAR_"); }
+                    else if (c == '¹') { sb.Append('1'); }
+                    else if (c == '²') { sb.Append('2'); }
+                    else if (c == '³') { sb.Append('3'); }
+                    else if (c == '⁴') { sb.Append('4'); }
+                    else if (c == '\'') { sb.Append('~'); }
+                    else if (c == '"') { sb.Append('~'); }
+                    else if (InvalidChars.Contains(c))
+                    {
+                        sb.Append('_');
+                    }
+                    else
+                    {
+                        sb.Append(c);
+                    }
+                }
+            }
+
+            return sb.ToString();
         }
 
         /// <summary>
