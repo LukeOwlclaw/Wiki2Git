@@ -663,9 +663,7 @@ namespace CLAParser
             string? ret;
             try
             {
-#pragma warning disable CA1304 // Specify CultureInfo
                 ret = mCmdLineArgResourceManager.GetString(resourceManagerString);
-#pragma warning restore CA1304 // Specify CultureInfo
             }
             catch (MissingManifestResourceException)
             {

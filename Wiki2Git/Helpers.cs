@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -43,11 +44,57 @@ namespace Wiki2Git
             process.WaitForExit();
             return process.ExitCode;
         }
-        public static string SanitizeFolderName(string name)
+
+        private static HashSet<char>? gInvalidChars;
+
+        public static HashSet<char> InvalidChars
         {
-            string regexSearch = new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
-            var r = new Regex(string.Format("[{0}]", Regex.Escape(regexSearch)));
-            return r.Replace(name, "");
+            get
+            {
+                if (gInvalidChars == null)
+                {
+                    gInvalidChars = new HashSet<char>(Path.GetInvalidFileNameChars().Union(Path.GetInvalidPathChars()));
+                }
+                return gInvalidChars;
+            }
+        }
+
+        /// <summary>
+        /// Remove all invalid characters from <paramref name="fileOrFolderName"/> and returned sanitized form which can be used a folder/file name.
+        /// </summary>
+        /// <param name="fileOrFolderName">wanted folder/file name which potentially contains invalid characters</param>
+        /// <returns>sanitized folder/file name </returns>
+        internal static string? SanitizeFileAndFolderName(string fileOrFolderName)
+        {
+            if (string.IsNullOrEmpty(fileOrFolderName)) { return null; }
+            var sb = new StringBuilder(fileOrFolderName.Length + 5);
+
+            string valueFormD = fileOrFolderName.Normalize(NormalizationForm.FormD);
+
+            foreach (var c in valueFormD)
+            {
+                var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(c);
+                if (unicodeCategory != UnicodeCategory.NonSpacingMark)
+                {
+                    if (c == '*') { sb.Append("_STAR_"); }
+                    else if (c == '¹') { sb.Append('1'); }
+                    else if (c == '²') { sb.Append('2'); }
+                    else if (c == '³') { sb.Append('3'); }
+                    else if (c == '⁴') { sb.Append('4'); }
+                    else if (c == '\'') { sb.Append('~'); }
+                    else if (c == '"') { sb.Append('~'); }
+                    else if (InvalidChars.Contains(c))
+                    {
+                        sb.Append('_');
+                    }
+                    else
+                    {
+                        sb.Append(c);
+                    }
+                }
+            }
+
+            return sb.ToString();
         }
 
         public static string FileSizeFormat(long sizeInBytes)

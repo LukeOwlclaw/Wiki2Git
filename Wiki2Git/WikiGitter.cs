@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-// Ignore spelling: config oldid de diff catname Wikipedia init prev
+// Ignore spelling: config oldid de diff catname Wikipedia init prev grep
 namespace Wiki2Git
 {
     /// <summary>
@@ -50,12 +50,28 @@ namespace Wiki2Git
         {
             var revisionList = new List<mediawikiPageRevision>();
 
-            var pageNameSane = Helpers.SanitizeFolderName(mPageName);
-            mOutDirectory = Path.Combine(mOutDirectory, pageNameSane);
+            var pageNameSane = Helpers.SanitizeFileAndFolderName(mPageName);
+            if (pageNameSane == null) { throw new InvalidOperationException($"Page name {mPageName} cannot be sanitized."); }
             Directory.CreateDirectory(mOutDirectory);
             Directory.SetCurrentDirectory(mOutDirectory);
             // get absolute path
             mOutDirectory = Directory.GetCurrentDirectory();
+
+            var baseUrl = GetWikiRevisionLinkBase(mPageName);
+            var story = GitterStory.Load();
+            var articleData = story.Articles.FirstOrDefault(a => a.Url == baseUrl);
+            if (articleData == null)
+            {
+                articleData = new ArticleData
+                {
+                    ArticleName = mPageName,
+                    Language = mLanguage,
+                    Url = baseUrl,
+                };
+
+                story.Articles.Add(articleData);
+                story.Store();
+            }
 
             Console.Write($"Downloading Wikipedia article {mPageName}... ");
 
@@ -92,6 +108,7 @@ namespace Wiki2Git
                         s.Position = 0;
                         s.CopyTo(fs2);
                         Console.WriteLine($" saved {Helpers.FileSizeFormat(fs2.Position)} to {outFile}.");
+                        articleData.LastImportDate = DateTime.Now;
                     }
                     else
                     {
@@ -135,10 +152,10 @@ namespace Wiki2Git
             {
                 var sbOut = new StringBuilder();
                 // Get log message of latest commit
-                Git("log -1", ref sbOut);
+                var searchWord = baseUrl;
+                Git($"log -1 --grep=\"{searchWord}\"", ref sbOut);
                 // e.g. https://de.wikipedia.org/wiki/Wissen?oldid=178452042&diff=prev
                 var lastCommitMessage = sbOut.ToString();
-                var searchWord = GetWikiRevisionLinkBase(mPageName);
                 var start = lastCommitMessage.IndexOf(searchWord);
                 if (start >= 0)
                 {
@@ -151,7 +168,14 @@ namespace Wiki2Git
                         if (index > 0)
                         {
                             startRevision = index + 1;
-                            Console.WriteLine($"Detected existing import. Continue after revision {revisionId} at index {startRevision}");
+                            if (startRevision < revisionList.Count)
+                            {
+                                Console.WriteLine($"Detected existing import. Continue after revision {revisionId} at index {startRevision}");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"Previous import already completed.");
+                            }
                         }
 
                     }
@@ -165,9 +189,18 @@ namespace Wiki2Git
                 {
                     Console.WriteLine($"Git importing revision {startRevision} of {revisionList.Count}...");
                 }
-                StoreGitRevision(mPageName, revision);
+                StoreGitRevision(pageNameSane, revision);
                 startRevision++;
             }
+
+            if (revisionListUse.Count == 0)
+            {
+                Console.WriteLine("No revisions imported.");
+            }
+
+            Directory.SetCurrentDirectory(mOutDirectory);
+            articleData.StoredRevisions = revisionList.Count;
+            story.Store();
         }
 
         private string? mLastAuthor = null;
@@ -177,11 +210,11 @@ namespace Wiki2Git
         /// <summary>
         /// Write <paramref name="revision"/> of <paramref name="pageName"/> to Git repository.
         /// </summary>
-        /// <param name="pageName">Wikipedia article name</param>
+        /// <param name="pageName">Wikipedia article name, sanitized because used as filename</param>
         /// <param name="revision">article revision</param>
         private void StoreGitRevision(string pageName, mediawikiPageRevision revision)
         {
-            RemoveOldFiles(revision.id);
+            RemoveOldFiles(pageName, revision.id);
             var fileCounter = 0;
             foreach (var text in revision.text)
             {
@@ -226,7 +259,7 @@ namespace Wiki2Git
 
             mLastFileCounter = fileCounter;
 
-            var author = SanitizeUserName(revision.contributor.Single().username)
+            var author = Helpers.SanitizeFileAndFolderName(revision.contributor.Single().username)
                 ?? revision.contributor.Single().ip;
             if (string.IsNullOrEmpty(author)) { author = "_no_author_"; }
             var authorId = revision.contributor.Single().id ?? revision.contributor.Single().ip;
@@ -263,53 +296,6 @@ namespace Wiki2Git
             return wikiRevisionLinkBase;
         }
 
-        private static HashSet<char>? gInvalidChars;
-
-        public static HashSet<char> InvalidChars
-        {
-            get
-            {
-                if (gInvalidChars == null)
-                {
-                    gInvalidChars = new HashSet<char>(Path.GetInvalidFileNameChars().Union(Path.GetInvalidPathChars()));
-                }
-                return gInvalidChars;
-            }
-        }
-
-        internal static string? SanitizeUserName(string username)
-        {
-            if (string.IsNullOrEmpty(username)) { return null; }
-            var sb = new StringBuilder(username.Length + 5);
-
-            string valueFormD = username.Normalize(NormalizationForm.FormD);
-
-            foreach (var c in valueFormD)
-            {
-                var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(c);
-                if (unicodeCategory != UnicodeCategory.NonSpacingMark)
-                {
-                    if (c == '*') { sb.Append("_STAR_"); }
-                    else if (c == '¹') { sb.Append('1'); }
-                    else if (c == '²') { sb.Append('2'); }
-                    else if (c == '³') { sb.Append('3'); }
-                    else if (c == '⁴') { sb.Append('4'); }
-                    else if (c == '\'') { sb.Append('~'); }
-                    else if (c == '"') { sb.Append('~'); }
-                    else if (InvalidChars.Contains(c))
-                    {
-                        sb.Append('_');
-                    }
-                    else
-                    {
-                        sb.Append(c);
-                    }
-                }
-            }
-
-            return sb.ToString();
-        }
-
         /// <summary>
         /// Split <paramref name="value"/> into Git manageable chunks.
         /// </summary>
@@ -323,13 +309,15 @@ namespace Wiki2Git
             int c;
             int position = 0;
             bool breakAfterNextSpace = false;
+            bool breakIfNextIsSpace = false;
             while ((c = reader.Read()) != -1)
             {
-                if (breakAfterNextSpace && (c == ' ' || c == '\n'))
+                if (c == '\n' || ((breakAfterNextSpace || breakIfNextIsSpace) && (c == ' ' || c == '|' || c == ',' || c == '.')))
                 {
                     var line = builder.ToString();
                     builder.Clear();
                     breakAfterNextSpace = false;
+                    breakIfNextIsSpace = false;
                     position = 0;
                     var lines = SplitLines(line, new[] { "|}|}", "<br>" });
                     if (lines != null)
@@ -337,7 +325,6 @@ namespace Wiki2Git
                         foreach (var l in lines)
                         {
                             yield return l;
-
                         }
                     }
                     else
@@ -347,17 +334,18 @@ namespace Wiki2Git
                 }
                 else
                 {
+                    breakIfNextIsSpace = false;
                     builder.Append((char)c);
 
-                    if (position >= lineLength) { breakAfterNextSpace = true; }
-                    else
-                    {
-                        if (c == ','
-                        || c == '.'
-                        || c == '!'
-                        || c == '?'
-                        ) { breakAfterNextSpace = true; }
-                    }
+                    if (!breakAfterNextSpace && position >= lineLength) { breakAfterNextSpace = true; }
+                    //else
+                    //{
+                    //    if (c == ','
+                    //    || c == '.'
+                    //    || c == '!'
+                    //    || c == '?'
+                    //    ) { breakIfNextIsSpace = true; }
+                    //}
                 }
 
                 position++;
@@ -411,14 +399,14 @@ namespace Wiki2Git
             }
         }
 
-        private static void RemoveOldFiles(string id)
+        private static void RemoveOldFiles(string fileName, string id)
         {
             var tryCount = 3;
             while (--tryCount >= 0)
             {
                 try
                 {
-                    string[] filePaths = Directory.GetFiles(Directory.GetCurrentDirectory());
+                    string[] filePaths = Directory.GetFiles(Directory.GetCurrentDirectory(), $"{fileName}*");
                     foreach (string filePath in filePaths)
                     {
                         File.Delete(filePath);
