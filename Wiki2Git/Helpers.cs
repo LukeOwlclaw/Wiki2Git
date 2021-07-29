@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -12,12 +13,20 @@ namespace Wiki2Git
     public static class Helpers
     {
         public static int Exec(string fileName, string arguments, StringBuilder? outBuilder = null,
-            StringBuilder? errBuilder = null)
+            StringBuilder? errBuilder = null, Dictionary<string, string>? environmentVariables = null)
         {
             var sb = new StringBuilder();
             var process = new System.Diagnostics.Process();
             process.StartInfo.FileName = fileName;
             process.StartInfo.Arguments = arguments;
+            if (environmentVariables != null)
+            {
+                foreach (var item in environmentVariables)
+                {
+                    process.StartInfo.EnvironmentVariables.Add(item.Key, item.Value);
+                }
+            }
+
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.CreateNoWindow = true;
             if (outBuilder != null)

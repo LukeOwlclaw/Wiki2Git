@@ -279,7 +279,9 @@ namespace Wiki2Git
                 mLastAuthorId = authorId;
             }
 
-            Git($"commit {addAllParameter} --date=format:short:\"{revision.timestamp}\" --author=\"{author} <{authorId}@wikipedia.org>\" -m \"{message}\" --allow-empty");
+            var environmentVariables = new Dictionary<string, string> { { "GIT_COMMITTER_DATE", $"{revision.timestamp}" } };
+            Git($"commit {addAllParameter} --date=format:short:\"{revision.timestamp}\" --author=\"{author} <{authorId}@wikipedia.org>\" -m \"{message}\" --allow-empty",
+                environmentVariables);
         }
 
         private string GetWikiRevisionLink(string pageName, mediawikiPageRevision revision)
@@ -462,9 +464,9 @@ namespace Wiki2Git
             return sb.ToString();
         }
 
-        private static void Git(string arguments)
+        private static void Git(string arguments, Dictionary<string, string>? environmentVariables = null)
         {
-            var ret = Helpers.Exec("git", arguments);
+            var ret = Helpers.Exec("git", arguments, environmentVariables: environmentVariables);
             if (ret != 0)
             {
                 throw new Exception($"git {arguments} failed in {Directory.GetCurrentDirectory()}");
