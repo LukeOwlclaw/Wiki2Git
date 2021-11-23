@@ -16,8 +16,8 @@ namespace Wiki2Git
             var clp = new CLAParser.CmdLineArgumentParser("Wiki2Git");
             clp.Parameter(ParamAllowType.Required, "", CLAParser.CmdLineArgumentParser.ValueType.String, "Wikipedia article");
             clp.Parameter(ParamAllowType.Required, "l", CLAParser.CmdLineArgumentParser.ValueType.String, "Language. Available: de, en");
-            clp.Parameter(ParamAllowType.Optional, "o", CLAParser.CmdLineArgumentParser.ValueType.String, "Out path. Current directory if not set.");
-            clp.Parameter(ParamAllowType.Optional, "r", CLAParser.CmdLineArgumentParser.ValueType.Int, "Start revision. For continuing early failed attempt.");
+            clp.Parameter(ParamAllowType.Optional, "o", CLAParser.CmdLineArgumentParser.ValueType.String, "Out path for git repository and downloaded article. Current directory if not set.");
+            clp.Parameter(ParamAllowType.Optional, "r", CLAParser.CmdLineArgumentParser.ValueType.Int, "Start revision. For continuing earlier failed attempt.");
             try
             {
                 clp.Parse();
