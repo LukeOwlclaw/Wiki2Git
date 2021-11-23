@@ -13,7 +13,8 @@ namespace Wiki2Git
     public static class Helpers
     {
         public static int Exec(string fileName, string arguments, StringBuilder? outBuilder = null,
-            StringBuilder? errBuilder = null, Dictionary<string, string>? environmentVariables = null)
+            StringBuilder? errBuilder = null, Dictionary<string, string>? environmentVariables = null,
+            bool swallowStdOut = false)
         {
             var sb = new StringBuilder();
             var process = new System.Diagnostics.Process();
@@ -36,6 +37,10 @@ namespace Wiki2Git
                 {
                     outBuilder?.AppendLine(data.Data);
                 };
+            }
+            else if (swallowStdOut)
+            {
+                process.StartInfo.RedirectStandardOutput = true;
             }
 
             if (errBuilder != null)
